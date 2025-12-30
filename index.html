@@ -1,135 +1,539 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChemiMemo Offline</title>
     <style>
-        :root { --p: #4f46e5; --bg: #f3f4f6; --s: #fff; --t: #1f2937; }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: sans-serif; }
-        body { margin: 0; background: var(--bg); color: var(--t); height: 100vh; display: flex; flex-direction: column; }
+        /* --- CSS VARIABLES & RESET --- */
+        :root {
+            --primary: #4f46e5;
+            --primary-dark: #4338ca;
+            --primary-light: #eef2ff;
+            --text-main: #1f2937;
+            --text-light: #6b7280;
+            --bg-body: #f3f4f6;
+            --bg-card: #ffffff;
+            --border: #e5e7eb;
+            --danger: #ef4444;
+            --success: #10b981;
+            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            --radius: 0.5rem;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         
-        header { background: var(--s); padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .logo { font-weight: bold; color: var(--p); font-size: 20px; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            line-height: 1.5;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* --- LAYOUT & NAV --- */
+        nav {
+            background: var(--bg-card);
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        .nav-content {
+            height: 4rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--text-main);
+        }
+
+        .nav-actions { display: flex; gap: 1rem; }
+
+        /* --- BUTTONS --- */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-weight: 500;
+            font-size: 0.875rem;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
         
-        main { flex: 1; overflow-y: auto; padding: 15px; padding-bottom: 80px; }
+        .btn-secondary { background: white; border-color: var(--border); color: var(--text-main); }
+        .btn-secondary:hover { background: var(--bg-body); }
+
+        .btn-toggle.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+        /* --- MAIN CONTENT --- */
+        main { padding: 2rem 0; flex: 1; }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 0.95rem;
+        }
         
-        .search { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; margin-bottom: 15px; font-size: 16px; }
+        .search-icon {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-light);
+            width: 18px;
+            height: 18px;
+        }
+
+        /* --- CATEGORIES --- */
+        .categories {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+        }
+
+        .chip {
+            padding: 0.25rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            background: white;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .chip.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+        /* --- GRID & CARDS --- */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: 0.75rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .card-top-bar { height: 4px; background: var(--primary); width: 100%; }
+
+        .card-body { padding: 1.25rem; }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .tag {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--primary);
+            background: var(--primary-light);
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .card-title { font-weight: 700; font-size: 1.125rem; margin-top: 0.25rem; }
+
+        .card-actions { opacity: 0; transition: opacity 0.2s; display: flex; gap: 0.5rem; }
+        .card:hover .card-actions { opacity: 1; }
         
-        .card { background: var(--s); border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .card-name { font-weight: bold; font-size: 18px; margin-bottom: 10px; display: block; }
-        .card-eq { font-size: 22px; text-align: center; padding: 20px 0; font-family: serif; border-top: 1px solid #eee; border-bottom: 1px solid #eee; margin: 10px 0; }
+        .icon-btn {
+            background: none; border: none; cursor: pointer; color: var(--text-light); padding: 4px;
+        }
+        .icon-btn:hover { color: var(--primary); }
+        .icon-btn.delete:hover { color: var(--danger); }
+
+        /* --- CHEMISTRY EQUATION DISPLAY --- */
+        .equation-box {
+            text-align: center;
+            padding: 1rem 0;
+            font-size: 1.25rem;
+            min-height: 4rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Times New Roman', serif;
+        }
+
+        /* Test Mode Blur Effect */
+        .blur-reveal {
+            filter: blur(6px);
+            cursor: pointer;
+            user-select: none;
+            transition: filter 0.3s;
+            background: rgba(0,0,0,0.05);
+            border-radius: 4px;
+            padding: 0 4px;
+        }
+        .blur-reveal:hover, .blur-reveal.revealed { filter: blur(0); background: transparent; }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .detail-box {
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            border: 1px solid transparent;
+        }
+        .detail-box.cat { background: #fffbeb; border-color: #fcd34d; }
+        .detail-box.cond { background: #eff6ff; border-color: #bfdbfe; }
+
+        .detail-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .detail-val { font-weight: 500; color: var(--text-main); }
+
+        .notes {
+            margin-top: 1rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.875rem;
+            color: var(--text-light);
+            font-style: italic;
+        }
+
+        /* --- MODAL --- */
+        .modal-backdrop {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 50;
+            display: none;
+        }
+        .modal-backdrop.open { display: flex; }
+
+        .modal {
+            background: white;
+            width: 100%;
+            max-width: 600px;
+            border-radius: 0.75rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--primary);
+            color: white;
+            border-radius: 0.75rem 0.75rem 0 0;
+        }
+        .modal-body { padding: 1.5rem; overflow-y: auto; }
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border);
+            display: flex; justify-content: flex-end; gap: 0.75rem;
+        }
+
+        /* --- FORM --- */
+        .form-group { margin-bottom: 1rem; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        label { display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.35rem; }
+        input, textarea, select {
+            width: 100%;
+            padding: 0.6rem;
+            border: 1px solid var(--border);
+            border-radius: 0.375rem;
+            font-size: 0.95rem;
+        }
+        input:focus, textarea:focus { outline: 2px solid var(--primary); border-color: transparent; }
         
-        .blur { filter: blur(8px); background: #eee; color: transparent; cursor: pointer; }
-        .revealed { filter: blur(0); background: transparent; color: inherit; }
+        .helper-text { font-size: 0.75rem; color: var(--text-light); margin-top: 0.25rem; }
+        .link-btn { color: var(--primary); text-decoration: none; font-size: 0.75rem; float: right; cursor: pointer; }
+
+        /* --- SVGs --- */
+        svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+        @media (max-width: 640px) {
+            .form-row { grid-template-columns: 1fr; }
+            .nav-actions span { display: none; } /* Hide button text on mobile */
+            .details-grid { grid-template-columns: 1fr; }
+        }
         
-        .fab { position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; background: var(--p); color: white; border-radius: 50%; border: none; font-size: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-        
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: flex-end; z-index: 100; }
-        .modal-inner { background: white; width: 100%; padding: 20px; border-radius: 20px 20px 0 0; }
-        input, textarea { width: 100%; padding: 12px; margin-top: 5px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; }
-        .btn-save { background: var(--p); color: white; width: 100%; border: none; padding: 15px; border-radius: 10px; font-weight: bold; }
-        
-        .actions { display: flex; justify-content: flex-end; gap: 15px; margin-top: 10px; font-size: 14px; color: var(--p); }
+        /* Bengali Font Adjustment fallback */
+        .bn-font { font-family: 'Kalpurush', 'Noto Sans Bengali', sans-serif; }
     </style>
 </head>
 <body>
 
-<header>
-    <div class="logo">ChemiMemo</div>
-    <button id="t-mode" style="padding: 5px 10px;">Test Mode</button>
-</header>
+    <nav>
+        <div class="container nav-content">
+            <div class="logo">
+                <svg viewBox="0 0 24 24"><path d="M10 2v7.31"/><path d="M14 9.3V1.99"/><path d="M8.5 2h7"/><path d="M14 9.3a6.5 6.5 0 1 1-4 0"/><path d="M5.52 16h12.96"/></svg>
+                <span id="app-title">ChemiMemo</span>
+            </div>
+            <div class="nav-actions">
+                <button id="test-mode-btn" class="btn btn-secondary btn-toggle">
+                    <svg viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                    <span id="lbl-test">Test Mode</span>
+                </button>
+                <button id="lang-btn" class="btn btn-primary">
+                    EN/BN
+                </button>
+            </div>
+        </div>
+    </nav>
 
-<main id="app-main">
-    <input type="text" id="q" class="search" placeholder="Search...">
-    <div id="list"></div>
-</main>
+    <main class="container">
+        <!-- Controls -->
+        <div class="controls">
+            <div class="search-box">
+                <div class="search-icon">
+                    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </div>
+                <input type="text" id="search-input" placeholder="Search equations...">
+            </div>
+            <button id="add-btn" class="btn btn-primary" style="padding-left: 1.5rem; padding-right: 1.5rem;">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                <span id="lbl-add">Add Equation</span>
+            </button>
+        </div>
 
-<button class="fab" id="add-btn">+</button>
+        <!-- Filter Chips -->
+        <div class="categories" id="category-container">
+            <!-- Injected via JS -->
+        </div>
 
-<div class="modal" id="m">
-    <div class="modal-inner">
-        <h3>Add Equation</h3>
-        <input type="text" id="in-name" placeholder="Name">
-        <textarea id="in-eq" placeholder="Equation (e.g. H_2O)"></textarea>
-        <button class="btn-save" id="save">SAVE</button>
-        <button onclick="document.getElementById('m').style.display='none'" style="width:100%; background:none; border:none; margin-top:10px;">Cancel</button>
+        <!-- Content Grid -->
+        <div id="grid" class="grid">
+            <!-- Cards Injected via JS -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state" style="text-align: center; padding: 4rem 1rem; display: none;">
+            <div style="background: #e0e7ff; width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem auto; color: var(--primary);">
+                <svg width="32" height="32" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+            </div>
+            <h3 id="msg-empty-title" style="font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem;">No Equations Yet</h3>
+            <p id="msg-empty-sub" style="color: var(--text-light);">Add your first chemical equation to get started.</p>
+        </div>
+    </main>
+
+    <!-- Modal -->
+    <div id="modal-backdrop" class="modal-backdrop">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modal-title" style="font-weight: 600;">Add Equation</h3>
+                <button id="close-modal" style="background:none; border:none; color:white; cursor:pointer;">
+                    <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="eq-form">
+                    <input type="hidden" id="edit-id">
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label id="lbl-cat">Category</label>
+                            <input type="text" id="inp-cat" list="cat-list" placeholder="e.g. Organic">
+                            <datalist id="cat-list">
+                                <option value="Organic"></option>
+                                <option value="Inorganic"></option>
+                                <option value="Physical"></option>
+                            </datalist>
+                        </div>
+                        <div class="form-group">
+                            <label id="lbl-name">Name</label>
+                            <input type="text" id="inp-name" placeholder="e.g. Photosynthesis">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label id="lbl-eq">Equation (LaTeX-style)</label>
+                        <a class="link-btn" onclick="insertExample()" id="btn-example">Insert Example</a>
+                        <textarea id="inp-latex" rows="3" placeholder="CO_2 + H_2O \rightarrow C_6H_{12}O_6 + O_2" style="font-family: monospace;"></textarea>
+                        <p class="helper-text">Supports: _ (subscript), ^ (superscript), \rightarrow (→), \rightleftharpoons (⇌)</p>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label id="lbl-catalyst">Catalyst</label>
+                            <input type="text" id="inp-catalyst" placeholder="e.g. Sunlight">
+                        </div>
+                        <div class="form-group">
+                            <label id="lbl-cond">Conditions</label>
+                            <input type="text" id="inp-cond" placeholder="e.g. Chlorophyll">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label id="lbl-notes">Notes</label>
+                        <textarea id="inp-notes" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="btn-cancel">Cancel</button>
+                <button type="button" class="btn btn-primary" id="btn-save">Save Equation</button>
+            </div>
+        </div>
     </div>
-</div>
 
-<script>
-    var equations = [];
-    var testMode = false;
+    <script>
+        // --- OFFLINE MATH PARSER ---
+        // Converts basic LaTeX chemistry syntax to HTML without external libraries
+        function parseChem(latex) {
+            if (!latex) return '';
+            let html = latex;
 
-    // Load Data safely
-    try {
-        var saved = localStorage.getItem('chemi_v4');
-        if(saved) equations = JSON.parse(saved);
-    } catch(e) { console.log("Storage blocked"); }
+            // 1. Escape HTML first to prevent injection
+            html = html.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-    function render() {
-        var query = document.getElementById('q').value.toLowerCase();
-        var html = '';
-        var list = equations.filter(function(e){
-            return e.name.toLowerCase().indexOf(query) > -1 || e.eq.toLowerCase().indexOf(query) > -1;
-        });
+            // 2. Replace arrows
+            html = html.replace(/\\rightarrow/g, ' &rarr; ');
+            html = html.replace(/\\rightleftharpoons/g, ' &#8652; ');
+            html = html.replace(/\\leftrightarrow/g, ' &harr; ');
+            html = html.replace(/->/g, ' &rarr; '); // Simple arrow support
 
-        for(var i=0; i<list.length; i++){
-            var item = list[i];
-            var blurCls = testMode ? 'blur' : '';
-            html += '<div class="card">' +
-                '<span class="card-name">' + item.name + '</span>' +
-                '<div class="card-eq"><span class="'+blurCls+'" onclick="this.classList.toggle(\'revealed\')">' + format(item.eq) + '</span></div>' +
-                '<div class="actions">' +
-                '<span onclick="deleteItem('+item.id+')">Delete</span>' +
-                '</div></div>';
+            // 3. Subscripts: _2 or _{12}
+            html = html.replace(/_\{([a-zA-Z0-9\+\-]+)\}/g, '<sub>$1</sub>');
+            html = html.replace(/_([a-zA-Z0-9])/g, '<sub>$1</sub>');
+
+            // 4. Superscripts: ^2 or ^{2+}
+            html = html.replace(/\^\{([a-zA-Z0-9\+\-]+)\}/g, '<sup>$1</sup>');
+            html = html.replace(/\^([a-zA-Z0-9\+\-])/g, '<sup>$1</sup>');
+
+            // 5. Spacing for +
+            html = html.replace(/\+/g, ' + ');
+
+            return html;
         }
-        document.getElementById('list').innerHTML = html || '<p style="text-align:center">No items</p>';
-    }
 
-    function format(str) {
-        return str.replace(/_([a-zA-Z0-9])/g, '<sub>$1</sub>').replace(/\^([a-zA-Z0-9])/g, '<sup>$1</sup>');
-    }
+        // --- TRANSLATIONS ---
+        const dict = {
+            en: {
+                appTitle: "ChemiMemo",
+                testMode: "Test Mode",
+                add: "Add Equation",
+                search: "Search equations...",
+                emptyTitle: "No Equations Yet",
+                emptySub: "Add your first chemical equation to get started.",
+                modalAdd: "Add Equation",
+                modalEdit: "Edit Equation",
+                cat: "Category",
+                name: "Name",
+                eq: "Equation",
+                catalyst: "Catalyst",
+                cond: "Conditions",
+                notes: "Notes",
+                cancel: "Cancel",
+                save: "Save",
+                example: "Insert Example",
+                deleteConfirm: "Delete this equation?"
+            },
+            bn: {
+                appTitle: "কেমি-মেমো",
+                testMode: "পরীক্ষা মোড",
+                add: "সমীকরণ যোগ",
+                search: "সমীকরণ খুঁজুন...",
+                emptyTitle: "কোনো সমীকরণ নেই",
+                emptySub: "শুরু করতে আপনার প্রথম সমীকরণ যোগ করুন।",
+                modalAdd: "নতুন সমীকরণ",
+                modalEdit: "সমীকরণ পরিবর্তন",
+                cat: "বিভাগ",
+                name: "নাম",
+                eq: "সমীকরণ (সূত্র)",
+                catalyst: "অনুঘটক",
+                cond: "শর্তাবলী",
+                notes: "নোট",
+                cancel: "বাতিল",
+                save: "সংরক্ষণ",
+                example: "উদাহরণ",
+                deleteConfirm: "আপনি কি এটি মুছে ফেলতে চান?"
+            }
+        };
 
-    function deleteItem(id) {
-        if(confirm('Delete?')) {
-            equations = equations.filter(function(x){ return x.id !== id });
-            save();
+        // --- APP LOGIC ---
+        let state = {
+            equations: JSON.parse(localStorage.getItem('chem_eqs')) || [],
+            lang: localStorage.getItem('chem_lang') || 'en',
+            testMode: false,
+            filter: 'All'
+        };
+
+        const els = {
+            grid: document.getElementById('grid'),
+            empty: document.getElementById('empty-state'),
+            modal: document.getElementById('modal-backdrop'),
+            cats: document.getElementById('category-container'),
+            form: document.getElementById('eq-form')
+        };
+
+        function init() {
+            updateLang();
+            renderCats();
+            renderGrid();
         }
-    }
 
-    function save() {
-        localStorage.setItem('chemi_v4', JSON.stringify(equations));
-        render();
-    }
-
-    document.getElementById('add-btn').onclick = function() {
-        document.getElementById('m').style.display = 'flex';
-    };
-
-    document.getElementById('save').onclick = function() {
-        var n = document.getElementById('in-name').value;
-        var e = document.getElementById('in-eq').value;
-        if(!e) return alert('Enter equation');
-        equations.push({id: Date.now(), name: n || 'Untitled', eq: e});
-        save();
-        document.getElementById('m').style.display = 'none';
-        document.getElementById('in-name').value = '';
-        document.getElementById('in-eq').value = '';
-    };
-
-    document.getElementById('q').oninput = render;
-    
-    document.getElementById('t-mode').onclick = function() {
-        testMode = !testMode;
-        this.style.background = testMode ? '#4f46e5' : '#eee';
-        this.style.color = testMode ? 'white' : 'black';
-        render();
-    };
-
-    render();
-</script>
-
-</body>
-</html>
-
-  
+        // --- RENDERERS ---
+        function renderGrid() {
+            const term = document.getElementById('search-input').value.toLowerCase();
+            const filtered = state.equations.filter(e => {
+                const matchSearch = e.name.toLowerCase().includes(term) || 
+                                  e.notes.toLowerCase().includes(term) ||
+                                  e.category.toLow
